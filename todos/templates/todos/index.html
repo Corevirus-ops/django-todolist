@@ -4,8 +4,63 @@
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
     <title>Django Todo App</title>
+    <script>
+        function logout() {
+            fetch("{% url 'logout' %}", {
+                method: "DELETE",
+                headers: {
+                    "X-CSRFToken": "{{ csrf_token }}",
+                },
+            })
+            .then(response => {
+                if (response.ok) {
+                    window.location.href = "{% url 'login' %}";
+                } else {
+                    console.error("Logout failed");
+                }
+            })
+        }
+        function deleteTodo(todoId) {
+            fetch(`/delete_todo/${todoId}/`, {
+                method: "DELETE",
+                headers: {
+                    "X-CSRFToken": "{{ csrf_token }}",
+                },
+            })
+            .then(response => {
+                if (response.ok) {
+                    window.location.reload();
+                } else {
+                    console.error("Delete failed");
+                }
+            })
+        }
+    </script>
 </head>
 <body>
-    <header>Hello World!</header>
+    <header>
+        <nav>
+            <button onclick="logout()">Logout</button>
+        </nav>
+        Hello {{ user.username }}
+    </header>
+    <section>
+        <h2>Todos</h2>
+        <form method="post" action="{% url 'create_todo' %}">
+            {% csrf_token %}
+            <input type="text" name="title" placeholder="Title" required>
+            <textarea name="description" placeholder="Description"></textarea>
+            <button type="submit">Create Todo</button>
+        </form>
+        <ul>
+            {% for todo in todos %}
+                <li>
+                    <strong>{{ todo.title }}</strong>: {{ todo.description }}
+                    <button onclick="deleteTodo({{ todo.id }})">Delete</button>
+                    <a href="{% url 'edit_todo' todo.id %}">Edit</a>
+                </li>
+            {% endfor %}
+        </ul>
+    </section>
 </body>
 </html>
