@@ -4,6 +4,7 @@
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
     <title>Django Todo App</title>
+    <link rel="stylesheet" href="https://stackpath.bootstrapcdn.com/bootstrap/4.5.2/css/bootstrap.min.css">
     <script>
         function logout() {
             fetch("{% url 'logout' %}", {
@@ -35,29 +36,55 @@
                 }
             })
         }
+        function toggleTodoCompletion(completed) {
+            const url = event.target.getAttribute('data-url');
+            fetch(url, {
+                method: "POST",
+                headers: {
+                    "Content-Type": "application/json",
+                    "X-CSRFToken": "{{ csrf_token }}",
+                },
+                body: JSON.stringify({ completed: completed })
+                
+            })
+            .then(response => {
+                if (!response.ok) {
+                    console.error("Toggle completion failed");
+                } 
+            })
+        }
     </script>
 </head>
 <body>
-    <header>
-        <nav>
-            <button onclick="logout()">Logout</button>
+    <header class="d-flex justify-content-between align-items-center p-3 bg-light">
+        <nav class="d-flex gap-3">
+            <button onclick="logout()" class="btn btn-outline-danger">Logout</button>
         </nav>
         Hello {{ user.username }}
     </header>
-    <section>
-        <h2>Todos</h2>
-        <form method="post" action="{% url 'create_todo' %}">
+    <section class="container mt-4">
+        <h2 class="mb-4">Todos</h2>
+        <form method="post" action="{% url 'create_todo' %}" class="mb-4">
             {% csrf_token %}
-            <input type="text" name="title" placeholder="Title" required>
-            <textarea name="description" placeholder="Description"></textarea>
-            <button type="submit">Create Todo</button>
+            <div class="form-group">
+                <input type="text" name="title" placeholder="Title" class="form-control" required>
+            </div>
+            <div class="form-group">
+                <textarea name="description" placeholder="Description" class="form-control"></textarea>
+            </div>
+            <button type="submit" class="btn btn-primary">Create Todo</button>
         </form>
         <ul>
+            <li class="mb-2 d-flex justify-content-between align-items-center border p-2 rounded bg-light">
+                <strong class="form-label">Title</strong> Description
+            </li>
             {% for todo in todos %}
-                <li>
-                    <strong>{{ todo.title }}</strong>: {{ todo.description }}
-                    <button onclick="deleteTodo({{ todo.id }})">Delete</button>
-                    <a href="{% url 'edit_todo' todo.id %}">Edit</a>
+                <li class="mb-2 d-flex justify-content-between align-items-center border p-2 rounded bg-light">
+                    <strong class="form-label">{{ todo.title }}</strong>
+                    <button onclick="deleteTodo({{ todo.id }})" class="btn btn-outline-danger form-button m-auto">Delete</button>
+                    <a href="{% url 'edit_todo' todo.id %}" class="btn btn-outline-primary form-button m-auto">Edit</a>
+                    <p class="text-nowrapping">{{ todo.description }}</p>
+                    <input data-url="{% url 'toggle_todo_completion' todo.id %}" type="checkbox" {% if todo.completed %} checked {% endif %}  class="form-check-input"  onclick="toggleTodoCompletion(this.checked)">
                 </li>
             {% endfor %}
         </ul>

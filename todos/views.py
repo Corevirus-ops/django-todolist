@@ -1,7 +1,8 @@
 from django.shortcuts import render, redirect, HttpResponse
 from django.contrib.auth import authenticate, login as auth_login, logout as auth_logout
 from todos.models import Todo
-
+from django.contrib.auth.models import User
+import json
 
 
 # Create your views here.
@@ -66,14 +67,19 @@ def edit_todo(request, todo_id):
             todo = Todo.objects.get(id=todo_id, user=request.user)
             title = request.POST.get('title')
             description = request.POST.get('description')
+            completed = request.POST.get('completed')
             if title:
                 todo.title = title
             if description:
                 todo.description = description
+            if completed is not None:
+                todo.completed = True
+            if completed is None:
+                todo.completed = False  
             todo.save()
             return redirect('index')
         except Todo.DoesNotExist:
-            return HttpResponse(status=404)  # Not Found
+            return HttpResponse(status=404) 
     if request.method == 'GET':
         try:
             todo = Todo.objects.get(id=todo_id, user=request.user)
@@ -84,3 +90,50 @@ def edit_todo(request, todo_id):
         except Todo.DoesNotExist:
             return HttpResponse(status=404)  # Not Found
     return HttpResponse("Invalid request method", status=405)
+
+def toggle_todo_completion(request, todo_id):
+    if request.method == 'POST':
+        try:
+            data = json.loads(request.body)
+            completed = data.get('completed')
+            todo = Todo.objects.get(id=todo_id, user=request.user)
+            todo.completed = bool(completed)  # Toggle the completed status
+            todo.save()
+            return HttpResponse(status=200)  # OK
+        except Todo.DoesNotExist:
+            return HttpResponse(status=404)  # Not Found
+    return HttpResponse("Invalid request method", status=405)
+
+def register(request):
+    if request.method == 'POST':
+        username = request.POST['username']
+        email = request.POST['email']
+        password = request.POST['password']
+        confirm_password = request.POST['confirm_password']
+        context = {
+            'username': username,
+            'email': email
+        }
+        if password != confirm_password:
+            context['error'] = 'Passwords do not match'
+            return render(request, 'todos/register.html', context=context)
+        if User.objects.filter(username=username).exists():
+            context['error'] = 'Username already exists'
+            return render(request, 'todos/register.html', context=context)
+        if User.objects.filter(email=email).exists():
+            context['error'] = 'Email already exists'
+            return render(request, 'todos/register.html', context=context)
+        if len(password) < 8:
+            context['error'] = 'Password must be at least 8 characters long'
+            return render(request, 'todos/register.html', context=context)
+        if not email or not username or not password:
+            context['error'] = 'All fields are required'
+            return render(request, 'todos/register.html', context=context)
+        user = User.objects.create_user(username=username, email=email, password=password)
+        user.save()
+        login_user = authenticate(request, username=username, password=password)
+        if login_user is not None:
+            auth_login(request, login_user)
+        return redirect('index')
+    if request.method == 'GET':
+        return render(request, 'todos/register.html')
